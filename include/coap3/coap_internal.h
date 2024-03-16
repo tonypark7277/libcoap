@@ -85,11 +85,26 @@
 /*
  * Include all the header files that are for internal use only.
  */
-#if COAP_OSCORE_SUPPORT && defined(WITH_CONTIKI)
+#if (COAP_OSCORE_SUPPORT || COAP_OSCORE_NG_SUPPORT) && defined(WITH_CONTIKI)
 #include "lib/aes-128.h"
 #include "lib/ccm-star.h"
 #include "lib/sha-256.h"
-#endif /*COAP_OSCORE_SUPPORT && WITH_CONTIKI */
+#endif /* (COAP_OSCORE_SUPPORT || COAP_OSCORE_NG_SUPPORT) && WITH_CONTIKI */
+
+#if COAP_OSCORE_NG_SUPPORT
+#ifdef WITH_CONTIKI
+#include "lib/cbor.h"
+#include "lib/list.h"
+#else /* WITH_CONTIKI */
+#include "oscore-ng/oscore_ng_aes_128.h"
+#include "oscore-ng/oscore_ng_cbor.h"
+#include "oscore-ng/oscore_ng_ccm_star.h"
+#include "oscore-ng/oscore_ng_list.h"
+#include "oscore-ng/oscore_ng_sha_256.h"
+#endif /* WITH_CONTIKI */
+#include "oscore-ng/oscore_ng_cose.h"
+#include "oscore-ng/oscore_ng.h"
+#endif /* COAP_OSCORE_NG_SUPPORT */
 
 #if defined(COAP_OSCORE_SUPPORT) || defined(COAP_WS_SUPPORT)
 /* Specific OSCORE general .h files */
@@ -106,9 +121,9 @@ typedef struct oscore_ctx_t oscore_ctx_t;
 #include "coap_async_internal.h"
 #include "coap_block_internal.h"
 #include "coap_cache_internal.h"
-#if defined(COAP_OSCORE_SUPPORT) || defined(COAP_WS_SUPPORT)
+#if (defined(COAP_OSCORE_SUPPORT) || defined(COAP_WS_SUPPORT))
 #include "coap_crypto_internal.h"
-#endif /* COAP_OSCORE_SUPPORT || COAP_WS_SUPPORT */
+#endif /* (COAP_OSCORE_SUPPORT || COAP_WS_SUPPORT) */
 #include "coap_debug_internal.h"
 #include "coap_dtls_internal.h"
 #include "coap_hashkey_internal.h"
@@ -120,6 +135,9 @@ typedef struct oscore_ctx_t oscore_ctx_t;
 #if COAP_OSCORE_SUPPORT
 #include "coap_oscore_internal.h"
 #endif /* COAP_OSCORE_SUPPORT */
+#if COAP_OSCORE_NG_SUPPORT
+#include "coap_oscore_ng_internal.h"
+#endif /* COAP_OSCORE_NG_SUPPORT */
 #include "coap_pdu_internal.h"
 #include "coap_prng_internal.h"
 #include "coap_proxy_internal.h"

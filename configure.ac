@@ -861,6 +861,24 @@ AC_SUBST(LIBCOAP_DTLS_LIB_EXTENSION_NAME)
 AC_SUBST([DOLLAR_SIGN],[$])
 
 # configure options
+# __OSCORE_NG__
+# Support for Object Security with improvements.
+AC_ARG_ENABLE([oscore-ng],
+              [AS_HELP_STRING([--enable-oscore-ng],
+                              [Enable building with OSCORE-NG support [default=no]])],
+              [build_oscore_ng="$enableval"],
+              [build_oscore_ng="no"])
+
+if test "x$build_oscore_ng" = "xyes"; then
+    AC_DEFINE(COAP_OSCORE_NG_SUPPORT, [1], [Define to build with OSCORE-NG support])
+    if test "x$enable_oscore" = "xyes"; then
+        enable_oscore=no
+        AC_MSG_WARN([disabling --enable-oscore since it conflicts with --enable_oscore_ng.])
+    fi
+fi
+AM_CONDITIONAL(COAP_OSCORE_NG_SUPPORT, [test "x$build_oscore_ng" = "xyes"])
+
+# configure options
 # __OSCORE__
 # Support for Object Security according to RFC 8613.
 AC_ARG_ENABLE([oscore],
@@ -1012,6 +1030,10 @@ if test "x$build_ws" = "xyes"; then
     if test "x$build_tcp" != "xyes"; then
         build_ws=no
         AC_MSG_WARN([--enable-websockets requires --enable-tcp, so --enable-websockets ignored.])
+    fi
+    if test "x$build_oscore_ng" == "xyes"; then
+        build_ws=no
+        AC_MSG_WARN([--enable-websockets conflicts with OSCORE-NG, so --enable-websockets ignored.])
     fi
 fi
 
@@ -1494,6 +1516,11 @@ if test "x$have_epoll" = "xyes"; then
     AC_MSG_RESULT([      build using epoll              : "$with_epoll"])
 fi
 AC_MSG_RESULT([      enable small stack size        : "$enable_small_stack"])
+if test "x$build_oscore_ng" = "xyes"; then
+    AC_MSG_RESULT([      build OSCORE-NG support        : "yes"])
+else
+    AC_MSG_RESULT([      build OSCORE-NG support        : "no"])
+fi
 if test "x$build_async" != "xno"; then
     AC_MSG_RESULT([      enable separate responses      : "yes"])
 else

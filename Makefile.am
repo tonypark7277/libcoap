@@ -25,6 +25,16 @@ libcoap_OSCORE_sources = \
   src/oscore/oscore_cose.c \
   src/oscore/oscore_crypto.c
 
+## Source files specifically for OSCORE-NG
+libcoap_OSCORE_NG_sources = \
+  src/oscore-ng/oscore_ng_aes_128.c \
+  src/oscore-ng/oscore_ng_cbor.c \
+  src/oscore-ng/oscore_ng_ccm_star.c \
+  src/oscore-ng/oscore_ng_cose.c \
+  src/oscore-ng/oscore_ng_list.c \
+  src/oscore-ng/oscore_ng_sha_256.c \
+  src/oscore-ng/oscore_ng.c
+
 ## Additional files for the distribution archive
 EXTRA_DIST = \
   BUILDING \
@@ -111,6 +121,7 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap_net_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_netif_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_oscore_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_oscore_ng_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_pdu_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_prng_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_proxy_internal.h \
@@ -129,6 +140,13 @@ EXTRA_DIST = \
   include/oscore/oscore_cose.h \
   include/oscore/oscore_crypto.h \
   include/oscore/oscore.h \
+  include/oscore-ng/oscore_ng_aes_128.h \
+  include/oscore-ng/oscore_ng_cbor.h \
+  include/oscore-ng/oscore_ng_ccm_star.h \
+  include/oscore-ng/oscore_ng_cose.h \
+  include/oscore-ng/oscore_ng_list.h \
+  include/oscore-ng/oscore_ng_sha_256.h \
+  include/oscore-ng/oscore_ng.h \
   src/coap_io_contiki.c \
   src/coap_io_lwip.c \
   src/coap_io_riot.c \
@@ -161,6 +179,11 @@ if !COAP_OSCORE_SUPPORT
 EXTRA_DIST += $(libcoap_OSCORE_sources)
 
 endif # !COAP_OSCORE_SUPPORT
+
+if !COAP_OSCORE_NG_SUPPORT
+EXTRA_DIST += $(libcoap_OSCORE_NG_sources)
+
+endif # !COAP_OSCORE_NG_SUPPORT
 
 AM_CFLAGS = -I$(top_builddir)/include -I$(top_srcdir)/include $(WARNING_CFLAGS) \
             $(DTLS_CFLAGS) -std=c99 $(EXTRA_CFLAGS) \
@@ -206,6 +229,7 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/coap_openssl.c \
   src/coap_option.c \
   src/coap_oscore.c \
+  src/coap_oscore_ng.c \
   src/coap_pdu.c \
   src/coap_proxy.c \
   src/coap_prng.c \
@@ -226,6 +250,11 @@ if COAP_OSCORE_SUPPORT
 libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES += $(libcoap_OSCORE_sources)
 
 endif # COAP_OSCORE_SUPPORT
+
+if COAP_OSCORE_NG_SUPPORT
+libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES += $(libcoap_OSCORE_NG_sources)
+
+endif # COAP_OSCORE_NG_SUPPORT
 
 ## Define the list of public header files and their install location.
 ## The API version is appended to the install folder to being able to
@@ -256,6 +285,7 @@ libcoap_include_HEADERS = \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_net.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_option.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_oscore.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_oscore_ng.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_pdu.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_prng.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_proxy.h \

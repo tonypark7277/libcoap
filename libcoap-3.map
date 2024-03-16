@@ -192,6 +192,8 @@ global:
   coap_option_iterator_init;
   coap_option_next;
   coap_oscore_is_supported;
+  coap_oscore_ng_init;
+  coap_oscore_ng_init_client_session;
   coap_package_build;
   coap_package_name;
   coap_package_version;

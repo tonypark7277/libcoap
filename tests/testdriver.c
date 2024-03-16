@@ -26,6 +26,9 @@
 #if COAP_OSCORE_SUPPORT && COAP_SERVER_SUPPORT
 #include "test_oscore.h"
 #endif /* COAP_OSCORE_SUPPORT && COAP_CLIENT_SUPPORT */
+#if COAP_OSCORE_NG_SUPPORT
+#include "test_oscore_ng.h"
+#endif /* COAP_OSCORE_SUPPORT */
 
 int
 main(int argc COAP_UNUSED, char **argv COAP_UNUSED) {
@@ -55,6 +58,9 @@ main(int argc COAP_UNUSED, char **argv COAP_UNUSED) {
 #if COAP_OSCORE_SUPPORT && COAP_SERVER_SUPPORT
   t_init_oscore_tests();
 #endif /* COAP_OSCORE_SUPPORT && COAP_CLIENT_SUPPORT */
+#if COAP_OSCORE_NG_SUPPORT
+  t_init_oscore_ng_tests();
+#endif /* COAP_OSCORE_NG_SUPPORT */
 
   CU_basic_set_mode(run_mode);
   result = CU_basic_run_tests();

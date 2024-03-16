@@ -1,0 +1,5 @@
+MODULES_SOURCES_EXCLUDES += oscore_ng_aes_128.c
+MODULES_SOURCES_EXCLUDES += oscore_ng_cbor.c
+MODULES_SOURCES_EXCLUDES += oscore_ng_ccm_star.c
+MODULES_SOURCES_EXCLUDES += oscore_ng_list.c
+MODULES_SOURCES_EXCLUDES += oscore_ng_sha_256.c

@@ -129,6 +129,11 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/build-${{matrix.TLS}}-cmake
           cmake --build .
+      - name: OSCORE-NG
+        if: matrix.TLS == 'no'
+        run: |
+          cd $GITHUB_WORKSPACE/build-${{matrix.TLS}}-cmake
+          cmake $GITHUB_WORKSPACE -DENABLE_TESTS=ON -DENABLE_DOCS=OFF -DENABLE_OSCORE=OFF -DENABLE_OSCORE_NG=ON
   cmake-macos:
     runs-on: macos-latest
 

@@ -95,6 +95,9 @@ struct coap_session_t {
   uint16_t tx_mid;                  /**< the last message id that was used in
                                          this session */
   uint8_t con_active;               /**< Active CON request sent */
+#if COAP_OSCORE_NG_SUPPORT
+  oscore_ng_context_t *oscore_ng_context; /**< OSCORE-NG context */
+#endif /* COAP_OSCORE_NG_SUPPORT */
   uint8_t csm_block_supported;      /**< CSM TCP blocks supported */
   coap_mid_t last_ping_mid;         /**< the last keepalive message id that was
                                          used in this session */

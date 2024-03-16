@@ -1,12 +1,12 @@
 CONTIKI=contiki-ng
 TARGET?=native
 
-WITH_CONTIKI_NG_BRANCH=release/v4.9
+WITH_CONTIKI_NG_BRANCH=master
 
 all: $(CONTIKI) check-version server
 
 $(CONTIKI):
-	git clone --depth 1 https://github.com/contiki-ng/contiki-ng.git $@
+	git clone --depth 1 https://github.com/kkrentz/contiki-ng.git $@
 	echo "Updating $(CONTIKI) to ${WITH_CONTIKI_NG_BRANCH}"
 	(cd ${CONTIKI} ; git pull --tags 2> /dev/null ; git checkout ${WITH_CONTIKI_NG_BRANCH})
 	cd $(CONTIKI)/os/net/app-layer && rm -rf libcoap && ln -s ../../../../../.. libcoap

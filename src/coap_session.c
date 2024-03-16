@@ -595,6 +595,9 @@ coap_session_mfree(coap_session_t *session) {
 #if COAP_OSCORE_SUPPORT
   coap_delete_oscore_associations(session);
 #endif /* COAP_OSCORE_SUPPORT */
+#if COAP_OSCORE_NG_SUPPORT
+  coap_oscore_ng_clear_context(session->oscore_ng_context);
+#endif /* COAP_OSCORE_NG_SUPPORT */
 #if COAP_WS_SUPPORT
   coap_free_type(COAP_STRING, session->ws);
   coap_delete_str_const(session->ws_host);

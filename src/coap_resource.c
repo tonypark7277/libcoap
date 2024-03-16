@@ -729,6 +729,10 @@ coap_print_link(const coap_resource_t *resource,
   if (resource->flags & COAP_RESOURCE_FLAGS_OSCORE_ONLY)
     COPY_COND_WITH_OFFSET(p, bufend, *offset, ";osc", 4, *len);
 #endif /* COAP_OSCORE_SUPPORT */
+#if COAP_OSCORE_NG_SUPPORT
+  if (resource->flags & COAP_RESOURCE_FLAGS_OSCORE_NG_ONLY)
+    COPY_COND_WITH_OFFSET(p, bufend, *offset, ";osc2", 5, *len);
+#endif /* COAP_OSCORE_NG_SUPPORT */
 
   output_length = (coap_print_status_t)(p - buf);
 

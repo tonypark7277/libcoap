@@ -100,6 +100,9 @@ struct coap_context_t {
 #if COAP_OSCORE_SUPPORT
   struct oscore_ctx_t *p_osc_ctx; /**< primary oscore context  */
 #endif /* COAP_OSCORE_SUPPORT */
+#if COAP_OSCORE_NG_SUPPORT
+  coap_oscore_ng_general_context_t *oscore_ng;
+#endif /* COAP_OSCORE_NG_SUPPORT */
 
 #if COAP_CLIENT_SUPPORT
   coap_response_handler_t response_handler; /**< Called when a response is

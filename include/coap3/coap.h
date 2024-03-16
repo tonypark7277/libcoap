@@ -56,6 +56,7 @@ extern "C" {
 #include "coap3/coap_net.h"
 #include "coap3/coap_option.h"
 #include "coap3/coap_oscore.h"
+#include "coap3/coap_oscore_ng.h"
 #include "coap3/coap_pdu.h"
 #include "coap3/coap_prng.h"
 #include "coap3/coap_proxy.h"

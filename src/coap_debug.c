@@ -782,6 +782,19 @@ is_binary(int content_format) {
 #error "COAP_DEBUG_BUF_SIZE must be at least 5, should be >= 32 to be useful"
 #endif /* COAP_DEBUG_BUF_SIZE < 5 */
 
+#if !COAP_OSCORE_SUPPORT
+static uint64_t
+read_timestamp(const uint8_t *src, uint_fast8_t len) {
+  uint64_t timestamp = 0;
+  uint_fast8_t pos = 0;
+  while (len--) {
+    timestamp += src[pos] << (pos * 8);
+    pos++;
+  }
+  return timestamp;
+}
+#endif /* !COAP_OSCORE_SUPPORT */
+
 void
 coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
 #if COAP_CONSTRAINED_STACK
@@ -932,6 +945,7 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
 
       case COAP_OPTION_OSCORE:
         opt_len = coap_opt_length(option);
+#if COAP_OSCORE_SUPPORT
         buf[0] = '\000';
         if (opt_len) {
           size_t ofs = 1;
@@ -990,6 +1004,122 @@ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
             }
           }
         }
+#else /* COAP_OSCORE_SUPPORT */
+        opt_val = coap_opt_value(option);
+        if (!opt_len) {
+          buf[0] = '\000';
+        } else {
+          uint8_t flags = opt_val[0];
+          opt_val++;
+          opt_len--;
+          uint64_t rx = 0;
+          if (flags & (1 << 4)) {
+            if (flags & (1 << 3)) {
+              /* r flag || t1l || t2l */
+              if (!opt_len) {
+                goto no_more;
+              }
+              buf_len = strlen((char *)buf);
+              snprintf((char *)&buf[buf_len], sizeof(buf) - buf_len,
+                       "r=%c,",
+                       opt_val[0] & (1 << 6) ? '1' : '0');
+              uint_fast8_t t1l = (opt_val[0] >> 3) & 7;
+              uint_fast8_t t2l = opt_val[0] & 7;
+              opt_val++;
+              opt_len--;
+              /* corresponding tx timestamp */
+              if (opt_len < t1l) {
+                goto no_more;
+              }
+              buf_len = strlen((char *)buf);
+              snprintf((char *)&buf[buf_len], sizeof(buf) - buf_len,
+                       "ctx=%"PRIu64",",
+                       read_timestamp(opt_val, t1l));
+              opt_len -= t1l;
+              opt_val += t1l;
+              /* rx timestamp */
+              if (opt_len < t2l) {
+                goto no_more;
+              }
+              rx = read_timestamp(opt_val, t2l);
+              buf_len = strlen((char *)buf);
+              snprintf((char *)&buf[buf_len], sizeof(buf) - buf_len,
+                       "rx=%"PRIu64",",
+                       rx);
+              opt_len -= t2l;
+              opt_val += t2l;
+            }
+            /* tx timestamp */
+            uint_fast8_t t3l = flags & 7;
+            if (opt_len < t3l) {
+              goto no_more;
+            }
+            buf_len = strlen((char *)buf);
+            snprintf((char *)&buf[buf_len], sizeof(buf) - buf_len,
+                     "tx=%"PRIu64,
+                     read_timestamp(opt_val, t3l) + rx);
+            opt_len -= t3l;
+            opt_val += t3l;
+          } else {
+            /* phase */
+            buf_len = strlen((char *)buf);
+            snprintf((char *)&buf[buf_len], sizeof(buf) - buf_len,
+                     "phase=%u",
+                     flags & 0xF);
+          }
+
+          if (flags & (1 << 6)) {
+            /* end-to-end mid */
+            if (opt_len < 2) {
+              goto no_more;
+            }
+            buf_len = strlen((char *)buf);
+            snprintf((char *)&buf[buf_len], sizeof(buf) - buf_len,
+                     ",e2e-mid=%u",
+                     opt_val[0] | (opt_val[1] << 8));
+            opt_len -= 2;
+            opt_val += 2;
+          }
+
+          if (flags & (1 << 5)) {
+            /* kid context */
+            buf_len = strlen((char *)buf);
+            snprintf((char *)&buf[buf_len], sizeof(buf) - buf_len,
+                     ",kid_context=0x");
+            if (!opt_len) {
+              goto no_more;
+            }
+            uint8_t s = opt_val[0];
+            opt_len--;
+            opt_val++;
+            if (opt_len < s) {
+              goto no_more;
+            }
+            while (s--) {
+              buf_len = strlen((char *)buf);
+              snprintf((char *)&buf[buf_len], sizeof(buf) - buf_len,
+                       "%02x",
+                       opt_val[0]);
+              opt_len--;
+              opt_val++;
+            }
+          }
+          if (COAP_PDU_IS_REQUEST(pdu) || COAP_PDU_IS_PING(pdu)) {
+            /* kid */
+            buf_len = strlen((char *)buf);
+            snprintf((char *)&buf[buf_len], sizeof(buf) - buf_len,
+                     ",kid=0x");
+            while (opt_len) {
+              buf_len = strlen((char *)buf);
+              snprintf((char *)&buf[buf_len], sizeof(buf) - buf_len,
+                       "%02x",
+                       opt_val[0]);
+              opt_len--;
+              opt_val++;
+            }
+          }
+        }
+#endif /* COAP_OSCORE_SUPPORT */
 no_more:
         buf_len = strlen((char *)buf);
         is_oscore_payload = 1;
