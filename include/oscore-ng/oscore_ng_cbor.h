@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2018, SICS, RISE AB
  * Copyright (c) 2023, Uppsala universitet
+ * Copyright (c) 2024, Siemens AG
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -118,6 +119,14 @@ typedef struct cbor_writer_state_t {
   size_t nesting_depth;
   cbor_nesting_record_t records[CBOR_MAX_NESTING];
 } cbor_writer_state_t;
+
+/**
+ * Structure of the internal state of a CBOR reader.
+ */
+typedef struct cbor_reader_state_t {
+  const uint8_t *cbor;
+  size_t cbor_size;
+} cbor_reader_state_t;
 
 /**
  * Prepares for writing CBOR output.
@@ -246,6 +255,91 @@ void cbor_open_map(cbor_writer_state_t *state);
  * @param state State of the CBOR writer.
  */
 void cbor_close_map(cbor_writer_state_t *state);
+
+/**
+ * Prepares for reading CBOR input.
+ *
+ * @param state     State of the CBOR reader.
+ * @param cbor      Buffer that holds the CBOR input.
+ * @param cbor_size Size of @p cbor in bytes.
+ */
+void cbor_init_reader(cbor_reader_state_t *state,
+                      const uint8_t *cbor, size_t cbor_size);
+
+/**
+ * Inspects the next major type.
+ *
+ * @param state State of the CBOR reader.
+ *
+ * @return      The next major type (could be @c CBOR_MAJOR_TYPE_NONE).
+ */
+cbor_major_type_t cbor_peek_next(cbor_reader_state_t *state);
+
+/**
+ * Ensures that no unread bytes are left.
+ *
+ * @param state State of the CBOR reader.
+ *
+ * @return      @c 1 if no unread bytes remain, or @c 0 otherwise.
+ */
+int cbor_end_reader(cbor_reader_state_t *state);
+
+/**
+ * Reads an unsigned integer.
+ *
+ * @param state State of the CBOR reader.
+ * @param value Buffer to store the unsigned integer.
+ *
+ * @return      Size of the unsigned integer or @c CBOR_SIZE_NONE on error.
+ */
+cbor_size_t cbor_read_unsigned(cbor_reader_state_t *state, uint64_t *value);
+
+/**
+ * Reads a byte string.
+ *
+ * @param state     State of the CBOR reader.
+ * @param data_size Size of the byte string in bytes.
+ *
+ * @return          First byte of the byte string or @c NULL on error.
+ */
+const uint8_t *cbor_read_data(cbor_reader_state_t *state, size_t *data_size);
+
+/**
+ * Reads a text string.
+ *
+ * @param state     State of the CBOR reader.
+ * @param text_size Number of characters in the text string.
+ *
+ * @return          First character of the text string or @c NULL on error.
+ */
+const char *cbor_read_text(cbor_reader_state_t *state, size_t *text_size);
+
+/**
+ * Reads a simple value.
+ *
+ * @param state State of the CBOR reader.
+ *
+ * @return      The simple value or @c CBOR_SIMPLE_VALUE_NONE on error.
+ */
+cbor_simple_value_t cbor_read_simple(cbor_reader_state_t *state);
+
+/**
+ * Reads the number of elements of an array.
+ *
+ * @param state State of the CBOR reader.
+ *
+ * @return      Number of elements or @c SIZE_MAX on error.
+ */
+size_t cbor_read_array(cbor_reader_state_t *state);
+
+/**
+ * Reads the number of entries of a map.
+ *
+ * @param state State of the CBOR reader.
+ *
+ * @return      Number of entries or @c SIZE_MAX on error.
+ */
+size_t cbor_read_map(cbor_reader_state_t *state);
 
 /** @} */
 

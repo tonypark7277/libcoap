@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2018, SICS, RISE AB
  * Copyright (c) 2023, Uppsala universitet
+ * Copyright (c) 2024, Siemens AG
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -251,4 +252,140 @@ cbor_close_map(cbor_writer_state_t *state) {
     return;
   }
   generic_close(state, state->records[state->nesting_depth].objects >> 1);
+}
+
+void
+cbor_init_reader(cbor_reader_state_t *state,
+                 const uint8_t *cbor, size_t cbor_size) {
+  state->cbor = cbor;
+  state->cbor_size = cbor_size;
+}
+
+cbor_major_type_t
+cbor_peek_next(cbor_reader_state_t *state) {
+  if (!state->cbor_size) {
+    return CBOR_MAJOR_TYPE_NONE;
+  }
+  return *state->cbor & 0xE0;
+}
+
+int
+cbor_end_reader(cbor_reader_state_t *state) {
+  return state->cbor_size == 0;
+}
+
+cbor_size_t
+cbor_read_unsigned(cbor_reader_state_t *state, uint64_t *value) {
+  cbor_size_t size;
+  size_t bytes_to_read;
+
+  if (!state->cbor_size) {
+    return CBOR_SIZE_NONE;
+  }
+  size = *state->cbor & ~0xE0;
+  state->cbor++;
+  state->cbor_size--;
+
+  if (size < CBOR_SIZE_1) {
+    *value = size;
+    return CBOR_SIZE_1;
+  }
+
+  switch (size) {
+  case CBOR_SIZE_1:
+    bytes_to_read = 1;
+    break;
+  case CBOR_SIZE_2:
+    bytes_to_read = 2;
+    break;
+  case CBOR_SIZE_4:
+    bytes_to_read = 4;
+    break;
+  case CBOR_SIZE_8:
+    bytes_to_read = 8;
+    break;
+  case CBOR_SIZE_NONE:
+  default:
+    return CBOR_SIZE_NONE;
+  }
+
+  if (bytes_to_read > state->cbor_size) {
+    return CBOR_SIZE_NONE;
+  }
+  state->cbor_size -= bytes_to_read;
+
+  *value = 0;
+  while (bytes_to_read--) {
+    *value <<= 8;
+    *value += *state->cbor++;
+  }
+  return size;
+}
+
+static const uint8_t *
+read_byte_or_text_string(cbor_reader_state_t *state, size_t *size) {
+  uint64_t value;
+  const uint8_t *beginning;
+
+  if ((CBOR_SIZE_NONE == cbor_read_unsigned(state, &value))
+      || (state->cbor_size < value)) {
+    return NULL;
+  }
+  *size = value;
+  beginning = state->cbor;
+  state->cbor += *size;
+  state->cbor_size -= *size;
+  return beginning;
+}
+
+const uint8_t *
+cbor_read_data(cbor_reader_state_t *state, size_t *data_size) {
+  if (cbor_peek_next(state) != CBOR_MAJOR_TYPE_BYTE_STRING) {
+    return NULL;
+  }
+  return read_byte_or_text_string(state, data_size);
+}
+
+const char *
+cbor_read_text(cbor_reader_state_t *state, size_t *text_size) {
+  if (cbor_peek_next(state) != CBOR_MAJOR_TYPE_TEXT_STRING) {
+    return NULL;
+  }
+  return (const char *)read_byte_or_text_string(state, text_size);
+}
+
+cbor_simple_value_t
+cbor_read_simple(cbor_reader_state_t *state) {
+  if (!state->cbor_size) {
+    return CBOR_SIMPLE_VALUE_NONE;
+  }
+  state->cbor_size--;
+  return *state->cbor++;
+}
+
+static size_t
+read_array_or_map(cbor_reader_state_t *state) {
+  uint64_t value;
+
+  if ((CBOR_SIZE_NONE == cbor_read_unsigned(state, &value))
+      || (value >= SIZE_MAX)) {
+    return SIZE_MAX;
+  }
+  return value;
+}
+
+size_t
+cbor_read_array(cbor_reader_state_t *state) {
+  if (cbor_peek_next(state) != CBOR_MAJOR_TYPE_ARRAY) {
+    return SIZE_MAX;
+  }
+  return read_array_or_map(state);
+}
+
+size_t
+cbor_read_map(cbor_reader_state_t *state) {
+  if (cbor_peek_next(state) != CBOR_MAJOR_TYPE_MAP) {
+    return SIZE_MAX;
+  }
+  return read_array_or_map(state);
 }
