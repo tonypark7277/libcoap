@@ -1,6 +1,7 @@
 /* libcoap unit tests
  *
  * Copyright (C) 2012-2025 Olaf Bergmann <bergmann@tzi.org>
+ * Copyright (C) 2025 Siemens AG
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -28,6 +29,7 @@
 #endif /* COAP_OSCORE_SUPPORT && COAP_CLIENT_SUPPORT */
 #if COAP_OSCORE_NG_SUPPORT
 #include "test_oscore_ng.h"
+#include "test_tiny_dice.h"
 #endif /* COAP_OSCORE_SUPPORT */
 
 int
@@ -60,6 +62,7 @@ main(int argc COAP_UNUSED, char **argv COAP_UNUSED) {
 #endif /* COAP_OSCORE_SUPPORT && COAP_CLIENT_SUPPORT */
 #if COAP_OSCORE_NG_SUPPORT
   t_init_oscore_ng_tests();
+  t_init_tiny_dice_tests();
 #endif /* COAP_OSCORE_NG_SUPPORT */
 
   CU_basic_set_mode(run_mode);

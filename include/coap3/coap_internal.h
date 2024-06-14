@@ -3,6 +3,7 @@
  * application programming
  *
  * Copyright (C) 2019-2025 Jon Shallow <supjps-libcoap@jpshallow.com>
+ * Copyright (C) Siemens AG
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -111,6 +112,7 @@
 #endif /* WITH_CONTIKI */
 #include "oscore-ng/oscore_ng_bakery.h"
 #include "oscore-ng/oscore_ng_cose.h"
+#include "oscore-ng/oscore_ng_tiny_dice.h"
 #include "oscore-ng/oscore_ng.h"
 #endif /* COAP_OSCORE_NG_SUPPORT */
 

@@ -3,6 +3,7 @@
 # Copyright (C) 2010-2025 Olaf Bergmann <bergmann@tzi.org>
 # Copyright (C) 2015-2017 Carsten Schoenert <c.schoenert@t-online.de>
 # Copyright (C) 2018-2025 Jon Shallow <supjps-libcoap@jpshallow.com>
+# Copyright (C) 2025 Siemens AG
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
@@ -37,6 +38,7 @@ libcoap_OSCORE_NG_sources = \
   src/oscore-ng/oscore_ng_ecc.c \
   src/oscore-ng/oscore_ng_list.c \
   src/oscore-ng/oscore_ng_sha_256.c \
+  src/oscore-ng/oscore_ng_tiny_dice.c \
   src/oscore-ng/oscore_ng.c
 
 ## Additional files for the distribution archive

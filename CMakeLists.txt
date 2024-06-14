@@ -2,6 +2,7 @@
 #
 # Copyright (C) 2020 Carlos Gomes Martinho <carlos.gomes_martinho@siemens.com>
 # Copyright (C) 2020-2025 Jon Shallow <supjps-libcoap@jpshallow.com>
+# Copyright (C) 2025 Siemens AG
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
@@ -862,6 +863,7 @@ target_sources(
           $<$<BOOL:${COAP_OSCORE_NG_SUPPORT}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore-ng/oscore_ng_ecc.c>
           $<$<BOOL:${COAP_OSCORE_NG_SUPPORT}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore-ng/oscore_ng_list.c>
           $<$<BOOL:${COAP_OSCORE_NG_SUPPORT}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore-ng/oscore_ng_sha_256.c>
+          $<$<BOOL:${COAP_OSCORE_NG_SUPPORT}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore-ng/oscore_ng_tiny_dice.c>
           $<$<BOOL:${COAP_OSCORE_NG_SUPPORT}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore-ng/oscore_ng.c>
           # headers
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap.h
@@ -957,6 +959,8 @@ if(ENABLE_TESTS)
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_sendqueue.h
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_session.c
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_session.h
+    ${CMAKE_CURRENT_LIST_DIR}/tests/test_tiny_dice.c
+    ${CMAKE_CURRENT_LIST_DIR}/tests/test_tiny_dice.h
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_tls.c
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_tls.h
     ${CMAKE_CURRENT_LIST_DIR}/tests/test_uri.c
