@@ -862,6 +862,7 @@ target_sources(
           $<$<BOOL:${COAP_OSCORE_NG_SUPPORT}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore-ng/oscore_ng_ecc_curve.c>
           $<$<BOOL:${COAP_OSCORE_NG_SUPPORT}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore-ng/oscore_ng_ecc.c>
           $<$<BOOL:${COAP_OSCORE_NG_SUPPORT}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore-ng/oscore_ng_list.c>
+          $<$<BOOL:${COAP_OSCORE_NG_SUPPORT}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore-ng/oscore_ng_rap.c>
           $<$<BOOL:${COAP_OSCORE_NG_SUPPORT}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore-ng/oscore_ng_sha_256.c>
           $<$<BOOL:${COAP_OSCORE_NG_SUPPORT}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore-ng/oscore_ng_tiny_dice.c>
           $<$<BOOL:${COAP_OSCORE_NG_SUPPORT}>:${CMAKE_CURRENT_LIST_DIR}/src/oscore-ng/oscore_ng.c>

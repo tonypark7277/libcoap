@@ -37,6 +37,7 @@ libcoap_OSCORE_NG_sources = \
   src/oscore-ng/oscore_ng_ecc_curve.c \
   src/oscore-ng/oscore_ng_ecc.c \
   src/oscore-ng/oscore_ng_list.c \
+  src/oscore-ng/oscore_ng_rap.c \
   src/oscore-ng/oscore_ng_sha_256.c \
   src/oscore-ng/oscore_ng_tiny_dice.c \
   src/oscore-ng/oscore_ng.c
