@@ -95,11 +95,14 @@
 #ifdef WITH_CONTIKI
 #include "lib/cbor.h"
 #include "lib/list.h"
+#include "sys/pt.h"
 #else /* WITH_CONTIKI */
 #include "oscore-ng/oscore_ng_aes_128.h"
 #include "oscore-ng/oscore_ng_cbor.h"
 #include "oscore-ng/oscore_ng_ccm_star.h"
+#include "oscore-ng/oscore_ng_lc.h"
 #include "oscore-ng/oscore_ng_list.h"
+#include "oscore-ng/oscore_ng_pt.h"
 #include "oscore-ng/oscore_ng_sha_256.h"
 #endif /* WITH_CONTIKI */
 #include "oscore-ng/oscore_ng_cose.h"
