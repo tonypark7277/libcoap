@@ -89,6 +89,7 @@ typedef struct coap_oscore_conf_t coap_oscore_conf_t;
  */
 typedef struct coap_oscore_ng_general_context_t
   coap_oscore_ng_general_context_t;
+typedef struct coap_rap_context_t coap_rap_context_t;
 
 /* ************* coap_pdu_internal.h ***************** */
 

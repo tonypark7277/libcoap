@@ -128,6 +128,7 @@ EXTRA_DIST = \
   include/coap$(LIBCOAP_API_VERSION)/coap_pdu_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_prng_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_proxy_internal.h \
+  include/coap$(LIBCOAP_API_VERSION)/coap_rap_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_resource_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_session_internal.h \
   include/coap$(LIBCOAP_API_VERSION)/coap_sha1_internal.h \
@@ -246,6 +247,7 @@ libcoap_@LIBCOAP_NAME_SUFFIX@_la_SOURCES = \
   src/coap_pdu.c \
   src/coap_proxy.c \
   src/coap_prng.c \
+  src/coap_rap.c \
   src/coap_resource.c \
   src/coap_session.c \
   src/coap_sha1.c \
@@ -302,6 +304,7 @@ libcoap_include_HEADERS = \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_pdu.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_prng.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_proxy.h \
+  $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_rap.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_resource.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_session.h \
   $(top_srcdir)/include/coap$(LIBCOAP_API_VERSION)/coap_str.h \

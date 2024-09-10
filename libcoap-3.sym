@@ -222,6 +222,7 @@ coap_proxy_forward_response
 coap_proxy_is_supported
 coap_q_block_is_supported
 coap_query_into_optlist
+coap_rap_initiate
 coap_realloc_type
 coap_register_async
 coap_register_dynamic_resource_handler

@@ -148,6 +148,9 @@ typedef struct oscore_ctx_t oscore_ctx_t;
 #include "coap_pdu_internal.h"
 #include "coap_prng_internal.h"
 #include "coap_proxy_internal.h"
+#if COAP_RAP_SUPPORT
+#include "coap_rap_internal.h"
+#endif /* COAP_RAP_SUPPORT */
 #include "coap_resource_internal.h"
 #include "coap_session_internal.h"
 #include "coap_sha1_internal.h"

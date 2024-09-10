@@ -23,6 +23,9 @@
 /* Define to 1 if the library has async separate response support. */
 #cmakedefine COAP_ASYNC_SUPPORT @COAP_ASYNC_SUPPORT@
 
+/* Define to 1 if the library has remote attestation support. */
+#cmakedefine COAP_RAP_SUPPORT @COAP_RAP_SUPPORT@
+
 /* Define to 1 if the library has client support. */
 #cmakedefine COAP_CLIENT_SUPPORT @COAP_CLIENT_SUPPORT@
 

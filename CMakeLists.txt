@@ -146,6 +146,10 @@ option(
   "compile with support for OSCORE-NG"
   OFF)
 option(
+  ENABLE_RAP
+  "compile with support for remote attestation"
+  OFF)
+option(
   WITH_OBSERVE_PERSIST
   "compile with observe persist support for server restarts"
   ON)
@@ -362,6 +366,17 @@ if(${ENABLE_PROXY_CODE})
   endif()
 else()
   message(STATUS "compiling without proxy support")
+endif()
+
+if(${ENABLE_RAP})
+  set(COAP_RAP_SUPPORT "1")
+  message(STATUS "compiling with remote attestation support")
+  if(NOT ${ENABLE_OSCORE_NG})
+    set(ENABLE_OSCORE_NG ON)
+    message(STATUS "OSCORE-NG enabled since remote attestation depends on it")
+  endif()
+else()
+  message(STATUS "compiling without remote attestation support")
 endif()
 
 if(${ENABLE_OSCORE_NG})
@@ -812,6 +827,7 @@ target_sources(
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_pdu.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_prng.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_proxy.c
+          ${CMAKE_CURRENT_LIST_DIR}/src/coap_rap.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_resource.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_session.c
           ${CMAKE_CURRENT_LIST_DIR}/src/coap_sha1.c
@@ -864,6 +880,7 @@ target_sources(
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_pdu.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_prng.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_proxy.h
+          ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_rap.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_resource.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_session.h
           ${CMAKE_CURRENT_LIST_DIR}/include/coap${LIBCOAP_API_VERSION}/coap_str.h

@@ -861,6 +861,24 @@ AC_SUBST(LIBCOAP_DTLS_LIB_EXTENSION_NAME)
 AC_SUBST([DOLLAR_SIGN],[$])
 
 # configure options
+# __RAP__
+# Support for remote attestation.
+AC_ARG_ENABLE([rap],
+              [AS_HELP_STRING([--enable-rap],
+                              [Enable building with remote attestation support [default=no]])],
+              [build_rap="$enableval"],
+              [build_rap="no"])
+
+if test "x$build_rap" = "xyes"; then
+    AC_DEFINE(COAP_RAP_SUPPORT, [1], [Define to build with remote attestation support])
+    if test "x$enable_oscore_ng" = "xno"; then
+        enable_oscore_ng=yes
+        AC_MSG_WARN([--enable-rap requires --enable_oscore_ng which is now enabled.])
+    fi
+fi
+AM_CONDITIONAL(COAP_RAP_SUPPORT, [test "x$build_rap" = "xyes"])
+
+# configure options
 # __OSCORE_NG__
 # Support for Object Security with improvements.
 AC_ARG_ENABLE([oscore-ng],
@@ -1520,6 +1538,11 @@ if test "x$build_oscore_ng" = "xyes"; then
     AC_MSG_RESULT([      build OSCORE-NG support        : "yes"])
 else
     AC_MSG_RESULT([      build OSCORE-NG support        : "no"])
+fi
+if test "x$build_rap" = "xyes"; then
+    AC_MSG_RESULT([      build remote attestation support : "yes"])
+else
+    AC_MSG_RESULT([      build remote attestation support : "no"])
 fi
 if test "x$build_async" != "xno"; then
     AC_MSG_RESULT([      enable separate responses      : "yes"])
