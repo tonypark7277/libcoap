@@ -2,6 +2,7 @@
  * coap_rap.c -- remote attestation and key exchange
  *
  * Copyright (C) 2021-2023 Uppsala universitet
+ * Copyright (C) 2025 Siemens AG
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -41,17 +42,21 @@ static coap_response_t on_report(coap_session_t *session,
                                  const coap_pdu_t *sent,
                                  const coap_pdu_t *received,
                                  const coap_mid_t mid);
+#if WITH_IRAP
+static PT_THREAD(reconstruct_sms_public_key(coap_rap_context_t *rap_context));
+#else /* ! WITH_IRAP */
 static PT_THREAD(verify_sm_report(coap_rap_context_t *rap_context));
-#if WITH_TRAP
+#endif /* ! WITH_IRAP */
+#if WITH_TRAP && ! WITH_IRAP
 static PT_THREAD(verify_tee_report(
                      uint8_t clients_fhmqv_mic[COAP_RAP_FHMQV_MIC_SIZE],
                      coap_rap_context_t *rap_context,
                      uint8_t secret[ECC_CURVE_P_256_SIZE]));
-#else /* ! WITH_TRAP */
+#else /* ! WITH_TRAP || WITH_IRAP */
 static PT_THREAD(verify_tee_report(
                      coap_rap_context_t *rap_context,
                      uint8_t secret[ECC_CURVE_P_256_SIZE]));
-#endif /* ! WITH_TRAP */
+#endif /* ! WITH_TRAP || WITH_IRAP */
 static void on_timeout(coap_session_t *session,
                        const coap_pdu_t *sent,
                        const coap_nack_reason_t reason,
@@ -67,9 +72,9 @@ const size_t register_path_length = sizeof(register_path) - 1;
 coap_rap_result_t
 coap_rap_initiate(coap_session_t *session,
                   const coap_rap_config_t *config
-#if WITH_TRAP
+#if WITH_TRAP && ! WITH_IRAP
                   , uint8_t clients_fhmqv_mic[COAP_RAP_FHMQV_MIC_SIZE]
-#endif /* WITH_TRAP */
+#endif /* WITH_TRAP && ! WITH_IRAP */
                  ) {
   PT_BEGIN(&session->rap_pt);
 
@@ -157,6 +162,15 @@ coap_rap_initiate(coap_session_t *session,
     goto error_1;
   }
 
+#if WITH_IRAP
+  PT_SPAWN(&session->rap_pt,
+           &session->rap_context->sub_pt,
+           reconstruct_sms_public_key(session->rap_context));
+  if (session->rap_context->result) {
+    coap_log_err("coap_rap_initiate: reconstruct_sms_public_key failed\n");
+    goto error_2;
+  }
+#else /* ! WITH_IRAP */
   PT_SPAWN(&session->rap_pt,
            &session->rap_context->sub_pt,
            verify_sm_report(session->rap_context));
@@ -164,21 +178,22 @@ coap_rap_initiate(coap_session_t *session,
     coap_log_err("coap_rap_initiate: received invalid SM report\n");
     goto error_2;
   }
+#endif /* ! WITH_IRAP */
 
   /* verify TEE report */
   {
     uint8_t secret[ECC_CURVE_P_256_SIZE];
-#if WITH_TRAP
+#if WITH_TRAP && ! WITH_IRAP
     PT_SPAWN(&session->rap_pt,
              &session->rap_context->sub_pt,
              verify_tee_report(clients_fhmqv_mic,
                                session->rap_context,
                                secret));
-#else /* ! WITH_TRAP */
+#else /* ! WITH_TRAP || WITH_IRAP */
     PT_SPAWN(&session->rap_pt,
              &session->rap_context->sub_pt,
              verify_tee_report(session->rap_context, secret));
-#endif /* ! WITH_TRAP */
+#endif /* ! WITH_TRAP || WITH_IRAP */
     if (session->rap_context->result) {
       coap_log_err("coap_rap_initiate: received invalid TEE report\n");
       goto error_2;
@@ -359,11 +374,27 @@ PT_THREAD(initiate_registration(coap_session_t *session)) {
 
   {
     size_t payload_size;
+#if WITH_IRAP
+    rap_reg_request_t reg_request;
+    reg_request.cookie = rap_context->msg.kno.cookie;
+    reg_request.cookie_size = rap_context->msg.kno.cookie_size;
+    ecc_compress_public_key(rap_context->my.ephemeral_public_key,
+                            reg_request.ephemeral_public_key_compressed);
+    if (rap_context->config->cert_chain) {
+      reg_request.out_cert_chain = *rap_context->config->cert_chain;
+    } else {
+      reg_request.out_cert_chain.length = 0;
+      reg_request.out_cert_chain.s = NULL;
+    }
+    reg_request.tee_tci_version = 0;
+    payload_size = rap_get_reg_requests_payload_size(&reg_request);
+#else /* ! WITH_IRAP */
     payload_size = (1 + ECC_CURVE_P_256_SIZE)
 #if ! WITH_TRAP
                    + COAP_RAP_SIGNATURE_SIZE
 #endif /* ! WITH_TRAP */
                    + rap_context->msg.kno.cookie_size;
+#endif /* ! WITH_IRAP */
 
     coap_pdu_t *pdu = coap_pdu_init(
                           COAP_MESSAGE_CON,
@@ -371,12 +402,34 @@ PT_THREAD(initiate_registration(coap_session_t *session)) {
                           coap_new_message_id(session),
                           coap_opt_encode_size(COAP_OPTION_URI_PATH,
                                                register_path_length)
+#if WITH_IRAP
+                          + coap_opt_encode_size(
+                              COAP_OPTION_OSCORE,
+                              1 + session->context->oscore_ng->sender_id.len)
+#endif /* WITH_IRAP */
                           + PAYLOAD_MARKER_SIZE
                           + payload_size);
     if (!pdu) {
       coap_log_err("initiate_registration: coap_pdu_init failed\n");
       goto error;
     }
+#if WITH_IRAP
+    {
+      uint8_t oscore_ng_option_value[1 + OSCORE_NG_MAX_ID_LEN];
+      oscore_ng_option_value[0] = 0;
+      memcpy(oscore_ng_option_value + 1,
+             session->context->oscore_ng->sender_id.u8,
+             session->context->oscore_ng->sender_id.len);
+      if (!coap_add_option(pdu,
+                           COAP_OPTION_OSCORE,
+                           1 + session->context->oscore_ng->sender_id.len,
+                           oscore_ng_option_value)) {
+        coap_log_err("initiate_registration: coap_add_option failed\n");
+        coap_delete_pdu(pdu);
+        goto error;
+      }
+    }
+#endif /* WITH_IRAP */
     if (!coap_add_option(pdu,
                          COAP_OPTION_URI_PATH,
                          register_path_length,
@@ -392,6 +445,13 @@ PT_THREAD(initiate_registration(coap_session_t *session)) {
         coap_delete_pdu(pdu);
         goto error;
       }
+#if WITH_IRAP
+      if (!rap_write_reg_request(&reg_request, pdu_data, payload_size)) {
+        coap_log_err("initiate_registration: rap_write_reg_request failed\n");
+        coap_delete_pdu(pdu);
+        goto error;
+      }
+#else /* ! WITH_IRAP */
 #if WITH_TRAP
       ecc_compress_public_key(rap_context->my.ephemeral_public_key, pdu_data);
       pdu_data += 1 + ECC_CURVE_P_256_SIZE;
@@ -406,6 +466,7 @@ PT_THREAD(initiate_registration(coap_session_t *session)) {
       memcpy(pdu_data,
              rap_context->msg.kno.cookie,
              rap_context->msg.kno.cookie_size);
+#endif /* ! WITH_IRAP */
     }
     rap_context->result = coap_send(session, pdu) == COAP_INVALID_MID;
   }
@@ -431,6 +492,50 @@ on_report(coap_session_t *session,
     coap_log_err("on_report: coap_get_data failed\n");
     goto error;
   }
+#if WITH_IRAP
+  rap_context->msg.reg.rx_timestamp = oscore_ng_generate_timestamp();
+  if (!rap_context->msg.reg.rx_timestamp) {
+    coap_log_err("on_report: oscore_ng_generate_timestamp failed\n");
+    goto error;
+  }
+  if (!rap_parse_reg_response(payload,
+                              payload_size,
+                              &rap_context->msg.reg.payload)) {
+    coap_log_err("on_report: rap_parse_reg_response failed\n");
+    goto error;
+  }
+  {
+    const tiny_dice_tci_mapping_t l1_tci_mapping = {
+      rap_context->config->expected_sm_hash, rap_context->config->sm_version
+    };
+    tiny_dice_decompress_cert_chain(rap_context->config->recipient_id->s,
+                                    NULL,
+                                    rap_context->config->recipient_id->length,
+                                    &l1_tci_mapping,
+                                    &rap_context->msg.reg.payload.cert_chain);
+    if (!rap_context->msg.reg.payload.cert_chain.length
+        || (rap_context->msg.reg.payload.cert_chain.length > 1)
+        || !rap_context->msg.reg.payload.cert_chain.certs[0].tci_digest
+        || (rap_context->msg.reg.payload.cert_chain.certs[0].tci_digest
+            != rap_context->config->expected_sm_hash)) {
+      coap_log_err("on_report: unacceptable certificate chain\n");
+      goto error;
+    }
+  }
+  rap_context->tee.ephemeral_public_key_compressed =
+      rap_context->msg.reg.payload.ephemeral_public_key_compressed;
+  if (rap_context->msg.reg.payload.tee_tci_version
+      != rap_context->config->tee_version) {
+    coap_log_err("on_report: untrusted TEE version\n");
+    goto error;
+  }
+  if (!coap_oscore_ng_parse_option(&rap_context->msg.reg.option_data,
+                                   received,
+                                   0)) {
+    coap_log_err("on_report: coap_oscore_ng_parse_option failed\n");
+    goto error;
+  }
+#else /* ! WITH_IRAP */
   /* validate length */
   if (payload_size != COAP_RAP_MAX_REPORT_SIZE) {
     coap_log_err("on_report: "
@@ -467,6 +572,7 @@ on_report(coap_session_t *session,
          payload,
          sizeof(rap_context->msg.reg.sms_signature));
 #endif /* ! WITH_TRAP */
+#endif /* ! WITH_IRAP */
 
   rap_context->result = 1;
   rap_context->config->resume();
@@ -478,6 +584,112 @@ error:
   return COAP_RESPONSE_FAIL;
 }
 
+#if WITH_IRAP
+static
+PT_THREAD(reconstruct_sms_public_key(coap_rap_context_t *rap_context)) {
+  PT_BEGIN(&rap_context->sub_pt);
+
+  memcpy(rap_context->sm.public_key,
+         rap_context->config->root_of_trusts_public_key,
+         sizeof(rap_context->sm.public_key));
+  if (!rap_context->msg.reg.payload.cert_chain.length) {
+    rap_context->result = 0;
+    PT_EXIT(&rap_context->sub_pt);
+  }
+
+  if (rap_context->msg.reg.payload.cert_chain.length > 2) {
+    coap_log_err("reconstruct_sms_public_key: overlong certificate chain\n");
+    rap_context->result = 1;
+    PT_EXIT(&rap_context->sub_pt);
+  }
+
+  if (rap_context->msg.reg.payload.cert_chain.certs[0].curve
+      != TINY_DICE_CURVE_SECP256R1) {
+    coap_log_err("reconstruct_sms_public_key: unsupported curve\n");
+    rap_context->result = 1;
+    PT_EXIT(&rap_context->sub_pt);
+  }
+
+  for (rap_context->reconstruct.i = 0;
+       rap_context->reconstruct.i < rap_context->msg.reg.payload.cert_chain.length;
+       rap_context->reconstruct.i++) {
+    tiny_dice_cert_t *current_cert =
+        rap_context->msg.reg.payload.cert_chain.certs + rap_context->reconstruct.i;
+
+    /* compute digest */
+    {
+      uint8_t cert[TINY_DICE_MAX_CERT_SIZE];
+      cbor_writer_state_t state;
+      size_t cert_size;
+
+      cbor_init_writer(&state, cert, sizeof(cert));
+      if (rap_context->reconstruct.i) {
+        current_cert->issuer_id = rap_context->reconstruct.cert_hash;
+      } else {
+        current_cert->issuer_id = NULL;
+        current_cert->issuer_hash = TINY_DICE_HASH_SHA256;
+      }
+      tiny_dice_write_cert(&state, current_cert);
+      cert_size = cbor_end_writer(&state);
+      if (!cert_size) {
+        rap_context->result = 1;
+        coap_log_err("reconstruct_sms_public_key: "
+                     "tiny_dice_prepend_cert failed\n");
+        PT_EXIT(&rap_context->sub_pt);
+      }
+      SHA_256.hash(cert, cert_size, rap_context->reconstruct.cert_hash);
+    }
+
+    {
+      uint8_t current_ca_public_key[ECC_CURVE_P_256_SIZE * 2];
+
+      memcpy(current_ca_public_key,
+             rap_context->sm.public_key,
+             sizeof(current_ca_public_key));
+
+      /* decompress reconstruction data */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+      PT_SPAWN(&rap_context->sub_pt,
+               ecc_get_protothread(),
+               ecc_decompress_public_key(current_cert->reconstruction_data,
+                                         rap_context->sm.public_key,
+                                         &rap_context->result));
+#pragma GCC diagnostic pop
+      if (rap_context->result) {
+        coap_log_err("reconstruct_sms_public_key: decompress_public_key failed\n");
+        PT_EXIT(&rap_context->sub_pt);
+      }
+
+      /* validate reconstruction data */
+      PT_SPAWN(&rap_context->sub_pt,
+               ecc_get_protothread(),
+               ecc_validate_public_key(rap_context->sm.public_key,
+                                       &rap_context->result));
+      if (rap_context->result) {
+        coap_log_err("reconstruct_sms_public_key: validate_public_key failed\n");
+        PT_EXIT(&rap_context->sub_pt);
+      }
+
+      /* restore public key in place */
+      PT_SPAWN(&rap_context->sub_pt,
+               ecc_get_protothread(),
+               ecc_reconstruct_ecqv_public_key(rap_context->reconstruct.cert_hash,
+                                               rap_context->sm.public_key,
+                                               current_ca_public_key,
+                                               rap_context->sm.public_key,
+                                               &rap_context->result));
+      if (rap_context->result) {
+        coap_log_err("reconstruct_sms_public_key: "
+                     "reconstruct_ecqv_public_key failed\n");
+        PT_EXIT(&rap_context->sub_pt);
+      }
+    }
+  }
+
+  PT_END(&rap_context->sub_pt);
+}
+#else /* ! WITH_IRAP */
 static
 PT_THREAD(verify_sm_report(coap_rap_context_t *rap_context)) {
   uint8_t sm_report_hash[SHA_256_DIGEST_LENGTH];
@@ -505,19 +717,20 @@ PT_THREAD(verify_sm_report(coap_rap_context_t *rap_context)) {
 
   PT_END(&rap_context->sub_pt);
 }
+#endif /* ! WITH_IRAP */
 
-#if WITH_TRAP
+#if WITH_TRAP && ! WITH_IRAP
 static
 PT_THREAD(verify_tee_report(
               uint8_t clients_fhmqv_mic[COAP_RAP_FHMQV_MIC_SIZE],
               coap_rap_context_t *rap_context,
               uint8_t secret[ECC_CURVE_P_256_SIZE])) {
-#else /* ! WITH_TRAP */
+#else /* ! WITH_TRAP || WITH_IRAP */
 static
 PT_THREAD(verify_tee_report(
               coap_rap_context_t *rap_context,
               uint8_t secret[ECC_CURVE_P_256_SIZE])) {
-#endif /* ! WITH_TRAP */
+#endif /* ! WITH_TRAP || WITH_IRAP */
 #if ! WITH_TRAP
   uint8_t sms_public_key[ECC_CURVE_P_256_SIZE * 2];
 #endif /* ! WITH_TRAP */
@@ -548,6 +761,7 @@ PT_THREAD(verify_tee_report(
   }
 #endif /* WITH_TRAP */
 
+#if ! WITH_IRAP
   /* decompress SM's public key */
 #if WITH_TRAP
   PT_SPAWN(&rap_context->sub_pt,
@@ -567,6 +781,7 @@ PT_THREAD(verify_tee_report(
                  "decompression of SM's public key failed\n");
     PT_EXIT(&rap_context->sub_pt);
   }
+#endif /* ! WITH_IRAP */
 
 #if WITH_TRAP
   union {
@@ -579,7 +794,9 @@ PT_THREAD(verify_tee_report(
     } s2;
     struct {
       uint8_t okm[ECC_CURVE_P_256_SIZE * 2];
+#if ! WITH_IRAP
       uint8_t fhmqv_mic[SHA_256_DIGEST_LENGTH];
+#endif /* ! WITH_IRAP */
     } s3;
   } stack;
 
@@ -637,11 +854,16 @@ PT_THREAD(verify_tee_report(
          rap_context->tee.ephemeral_public_key,
          sizeof(rap_context->tee.ephemeral_public_key));
   sha_256_hkdf(
-      NULL, 0, /* TODO use salt */
+#if WITH_IRAP
+      rap_context->config->expected_tee_hash, SHA_256_DIGEST_LENGTH,
+#else /* ! WITH_IRAP */
+      NULL, 0,
+#endif /* ! WITH_IRAP */
       stack.s2.sigma, sizeof(stack.s2.sigma),
       stack.s2.ikm, sizeof(stack.s2.ikm),
       stack.s3.okm, sizeof(stack.s3.okm));
 
+#if ! WITH_IRAP
   {
 #if ! WITH_CONTIKI
     sha_256_hmac_context_t ctx;
@@ -688,6 +910,7 @@ PT_THREAD(verify_tee_report(
                         stack.s3.fhmqv_mic);
   }
   memcpy(clients_fhmqv_mic, stack.s3.fhmqv_mic, COAP_RAP_FHMQV_MIC_SIZE);
+#endif /* ! WITH_IRAP */
 
   memcpy(secret, stack.s3.okm + ECC_CURVE_P_256_SIZE, ECC_CURVE_P_256_SIZE);
 #else /* ! WITH_TRAP */
@@ -807,21 +1030,41 @@ init_oscore_ng_session(coap_session_t *session,
     oscore_ng_set_id_context(session->oscore_ng_context, &id_context, true);
   }
 
+#if WITH_IRAP
+  {
+    static const coap_bin_const_t empty_token = { 0, NULL };
+
+    if (!oscore_ng_unsecure(
+            session->oscore_ng_context,
+            COAP_MESSAGE_ACK,
+            &empty_token,
+            &session->rap_context->msg.reg.option_data,
+            session->rap_context->msg.reg.payload.oscore_ng_mic,
+            sizeof(session->rap_context->msg.reg.payload.oscore_ng_mic),
+            false,
+            session->rap_context->msg.reg.rx_timestamp)) {
+      coap_oscore_ng_clear_context(session->oscore_ng_context);
+      session->oscore_ng_context = NULL;
+      coap_log_err("init_oscore_ng_session: oscore_ng_unsecure failed\n");
+      return 0;
+    }
+  }
+#endif /* WITH_IRAP */
   return 1;
 }
 #else /* ! COAP_RAP_SUPPORT || ! COAP_CLIENT_SUPPORT */
 coap_rap_result_t
 coap_rap_initiate(coap_session_t *session,
                   const coap_rap_config_t *config
-#if WITH_TRAP
+#if WITH_TRAP && ! WITH_IRAP
                   , uint8_t clients_fhmqv_mic[COAP_RAP_FHMQV_MIC_SIZE]
-#endif /* WITH_TRAP */
+#endif /* WITH_TRAP && ! WITH_IRAP */
                  ) {
   (void)session;
   (void)config;
-#if WITH_TRAP
+#if WITH_TRAP && ! WITH_IRAP
   (void)clients_fhmqv_mic;
-#endif /* WITH_TRAP */
+#endif /* WITH_TRAP && ! WITH_IRAP */
   return COAP_RAP_RESULT_EXITED;
 }
 #endif /* ! COAP_RAP_SUPPORT || ! COAP_CLIENT_SUPPORT */

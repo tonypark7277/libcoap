@@ -2,6 +2,7 @@
  * coap_rap_internal.h -- remote attestation and key exchange
  *
  * Copyright (C) 2021-2023 Uppsala universitet
+ * Copyright (C) 2025 Siemens AG
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -34,13 +35,19 @@
    + COAP_RAP_SIGNATURE_SIZE /* signature of SM report */ \
    + ECC_CURVE_P_256_SIZE /* enclave's ephemeral public key */ \
    + (WITH_TRAP \
-   ? COAP_RAP_FHMQV_MIC_SIZE /* truncated FHMQV MIC */ \
+   ? (WITH_IRAP ? 0 : COAP_RAP_FHMQV_MIC_SIZE /* truncated FHMQV MIC */) \
    : COAP_RAP_SIGNATURE_SIZE /* signature of enclave report */))
+
+typedef struct coap_rap_reconstruction_context_t {
+  uint8_t cert_hash[SHA_256_DIGEST_LENGTH];
+  size_t i;
+} coap_rap_reconstruction_context_t;
 
 struct coap_rap_context_t {
   const coap_rap_config_t *config;
   int result;
   struct pt sub_pt;
+  coap_rap_reconstruction_context_t reconstruct;
 
   struct {
     uint8_t ephemeral_private_key[ECC_CURVE_P_256_SIZE];
@@ -55,14 +62,20 @@ struct coap_rap_context_t {
 #if WITH_TRAP
     uint8_t ephemeral_public_key[ECC_CURVE_P_256_SIZE * 2];
 #endif /* WITH_TRAP */
+#if WITH_IRAP
+    const uint8_t *ephemeral_public_key_compressed;
+#else /* ! WITH_IRAP */
     uint8_t ephemeral_public_key_compressed[1 + ECC_CURVE_P_256_SIZE];
+#endif /* ! WITH_IRAP */
   } tee;
 
   union {
 #if WITH_TRAP
     uint8_t public_key[ECC_CURVE_P_256_SIZE * 2];
 #endif /* WITH_TRAP */
+#if ! WITH_IRAP
     uint8_t public_key_compressed[1 + ECC_CURVE_P_256_SIZE];
+#endif /* ! WITH_IRAP */
   } sm;
 
   union {
@@ -72,12 +85,18 @@ struct coap_rap_context_t {
     } kno;
 
     struct {
+#if WITH_IRAP
+      uint64_t rx_timestamp;
+      rap_reg_response_t payload;
+      oscore_ng_option_data_t option_data;
+#else /* ! WITH_IRAP */
       uint8_t bootloaders_signature[COAP_RAP_SIGNATURE_SIZE];
 #if WITH_TRAP
       uint8_t tees_fhmqv_mic[COAP_RAP_FHMQV_MIC_SIZE];
 #else /* ! WITH_TRAP */
       uint8_t sms_signature[COAP_RAP_SIGNATURE_SIZE];
 #endif /* ! WITH_TRAP */
+#endif /* ! WITH_IRAP */
     } reg;
   } msg;
 };

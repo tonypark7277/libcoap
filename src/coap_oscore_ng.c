@@ -2,6 +2,7 @@
  * coap_oscore_ng.c -- OSCORE-NG support for libcoap
  *
  * Copyright (C) 2021-2023 Uppsala universitet
+ * Copyright (C) 2025 Siemens AG
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -437,6 +438,18 @@ coap_oscore_ng_message_decrypt(coap_session_t *session,
                    "coap_oscore_ng_parse_option failed\n");
     return NULL;
   }
+#if COAP_RAP_SUPPORT && WITH_IRAP
+  /* filter out /reg requests */
+  {
+    coap_opt_iterator_t oi;
+    coap_opt_t *opt = coap_check_option(pdu, COAP_OPTION_URI_PATH, &oi);
+    if (opt
+        && (coap_opt_length(opt) == register_path_length)
+        && !memcmp(coap_opt_value(opt), register_path, register_path_length)) {
+      return pdu;
+    }
+  }
+#endif /* COAP_RAP_SUPPORT && WITH_IRAP */
 
 #if COAP_SERVER_SUPPORT
   /* create session if necessary */

@@ -2,6 +2,7 @@
  * coap_rap.h -- remote attestation and key exchange
  *
  * Copyright (C) 2021-2023 Uppsala universitet
+ * Copyright (C) 2025 Siemens AG
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -30,6 +31,10 @@
 #ifndef WITH_TRAP
 #define WITH_TRAP 1
 #endif /* WITH_TRAP */
+
+#ifndef WITH_IRAP
+#define WITH_IRAP 1
+#endif /* WITH_IRAP */
 
 #ifndef COAP_RAP_FHMQV_MIC_SIZE
 #define COAP_RAP_FHMQV_MIC_SIZE (8)
@@ -72,10 +77,15 @@ typedef struct coap_rap_config_t {
   const uint8_t *root_of_trusts_public_key;
   const uint8_t *expected_sm_hash;
   const uint8_t *expected_tee_hash;
+#if WITH_IRAP
+  uint32_t sm_version;
+  uint32_t tee_version;
+  const coap_bin_const_t *cert_chain;
+#endif /* WITH_IRAP */
   coap_rap_keying_material_setter_t keying_material_setter;
 } coap_rap_config_t;
 
-#if WITH_TRAP
+#if WITH_TRAP && ! WITH_IRAP
 /**
  * Performs a remote attestation and establishes an OSCORE-NG session.
  * NOTE: For the time being, this functions overwrites response handlers.
@@ -87,7 +97,7 @@ typedef struct coap_rap_config_t {
  *
  * @return                  Feedback on how to proceed.
  */
-#else /* ! WITH_TRAP */
+#else /* ! WITH_TRAP || WITH_IRAP */
 /**
  * Performs a remote attestation and establishes an OSCORE-NG session.
  * NOTE: For the time being, this functions overwrites response handlers.
@@ -98,13 +108,13 @@ typedef struct coap_rap_config_t {
  *
  * @return                  Feedback on how to proceed.
  */
-#endif /* ! WITH_TRAP */
+#endif /* ! WITH_TRAP || WITH_IRAP  */
 coap_rap_result_t coap_rap_initiate(
     coap_session_t *session,
     const coap_rap_config_t *config
-#if WITH_TRAP
+#if WITH_TRAP && ! WITH_IRAP
     , uint8_t clients_fhmqv_mic[COAP_RAP_FHMQV_MIC_SIZE]
-#endif /* WITH_TRAP */
+#endif /* WITH_TRAP && ! WITH_IRAP */
 );
 
 /** @} */
