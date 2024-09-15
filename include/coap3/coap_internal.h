@@ -94,6 +94,7 @@
 #if COAP_OSCORE_NG_SUPPORT
 #ifdef WITH_CONTIKI
 #include "lib/cbor.h"
+#include "lib/ecc.h"
 #include "lib/list.h"
 #include "sys/pt.h"
 #else /* WITH_CONTIKI */
@@ -104,6 +105,9 @@
 #include "oscore-ng/oscore_ng_list.h"
 #include "oscore-ng/oscore_ng_pt.h"
 #include "oscore-ng/oscore_ng_sha_256.h"
+#include "oscore-ng/oscore_ng_ecc_curve.h"
+#include "oscore-ng/oscore_ng_ecc.h"
+#include "uECC.h"
 #endif /* WITH_CONTIKI */
 #include "oscore-ng/oscore_ng_cose.h"
 #include "oscore-ng/oscore_ng.h"

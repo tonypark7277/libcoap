@@ -27,10 +27,13 @@ libcoap_OSCORE_sources = \
 
 ## Source files specifically for OSCORE-NG
 libcoap_OSCORE_NG_sources = \
+  ext/micro-ecc/uECC.c \
   src/oscore-ng/oscore_ng_aes_128.c \
   src/oscore-ng/oscore_ng_cbor.c \
   src/oscore-ng/oscore_ng_ccm_star.c \
   src/oscore-ng/oscore_ng_cose.c \
+  src/oscore-ng/oscore_ng_ecc_curve.c \
+  src/oscore-ng/oscore_ng_ecc.c \
   src/oscore-ng/oscore_ng_list.c \
   src/oscore-ng/oscore_ng_sha_256.c \
   src/oscore-ng/oscore_ng.c
@@ -188,6 +191,16 @@ endif # !COAP_OSCORE_NG_SUPPORT
 AM_CFLAGS = -I$(top_builddir)/include -I$(top_srcdir)/include $(WARNING_CFLAGS) \
             $(DTLS_CFLAGS) -std=c99 $(EXTRA_CFLAGS) \
             -DLIBCOAP_PACKAGE_BUILD='"$(LIBCOAP_PACKAGE_BUILD)"'
+
+if COAP_OSCORE_NG_SUPPORT
+AM_CFLAGS += -I$(top_builddir)/ext/micro-ecc \
+              -DuECC_ENABLE_VLI_API=1 \
+              -DuECC_SUPPORTS_secp160r1=0 \
+              -DuECC_SUPPORTS_secp192r1=0 \
+              -DuECC_SUPPORTS_secp224r1=0 \
+              -DuECC_SUPPORTS_secp256r1=1 \
+              -DuECC_SUPPORTS_secp256k1=0
+endif # COAP_OSCORE_NG_SUPPORT
 
 SUBDIRS = $(subdirs) . man doc tests examples
 

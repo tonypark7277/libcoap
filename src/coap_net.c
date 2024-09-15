@@ -5176,6 +5176,9 @@ coap_startup(void) {
   us = coap_ticks_to_rt_us(now);
   /* Be accurate to the nearest (approx) us */
   coap_prng_init_lkd((unsigned int)us);
+#if COAP_RAP_SUPPORT
+  ecc_init();
+#endif /* COAP_RAP_SUPPORT */
 #else /* WITH_CONTIKI */
   coap_start_io_process();
 #endif /* WITH_CONTIKI */

@@ -1,0 +1,240 @@
+/*
+ * Copyright (c) 2021, Uppsala universitet.
+ * Copyright (c) 2024, Siemens AG.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE
+ * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/**
+ * \addtogroup crypto
+ * @{
+ *
+ * \file
+ *         Adapter for uECC.
+ * \author
+ *         Konrad Krentz <konrad.krentz@gmail.com>
+ */
+
+#include "coap3/coap_libcoap_build.h"
+
+static struct pt protothread;
+
+/*---------------------------------------------------------------------------*/
+static int
+csprng_adapter(uint8_t *dest, unsigned size) {
+  return oscore_ng_csprng(dest, size);
+}
+/*---------------------------------------------------------------------------*/
+void
+ecc_init(void) {
+  uECC_set_rng(csprng_adapter);
+}
+/*---------------------------------------------------------------------------*/
+int
+ecc_enable(const ecc_curve_t *curve) {
+  if (curve != &ecc_curve_p_256) {
+    return 1;
+  }
+  return 0;
+}
+/*---------------------------------------------------------------------------*/
+struct pt *
+ecc_get_protothread(void) {
+  return &protothread;
+}
+/*---------------------------------------------------------------------------*/
+PT_THREAD(ecc_validate_public_key(const uint8_t *public_key,
+                                  int *const result)) {
+  PT_BEGIN(&protothread);
+
+  *result = !uECC_valid_public_key(public_key, uECC_secp256r1());
+
+  PT_END(&protothread);
+}
+/*---------------------------------------------------------------------------*/
+void
+ecc_compress_public_key(const uint8_t *uncompressed_public_key,
+                        uint8_t *compressed_public_key) {
+  uECC_compress(uncompressed_public_key,
+                compressed_public_key,
+                uECC_secp256r1());
+}
+/*---------------------------------------------------------------------------*/
+PT_THREAD(ecc_decompress_public_key(const uint8_t *compressed_public_key,
+                                    uint8_t *uncompressed_public_key,
+                                    int *const result)) {
+  PT_BEGIN(&protothread);
+
+  uECC_decompress(compressed_public_key,
+                  uncompressed_public_key,
+                  uECC_secp256r1());
+  *result = 0;
+
+  PT_END(&protothread);
+}
+/*---------------------------------------------------------------------------*/
+PT_THREAD(ecc_sign(const uint8_t *message_hash,
+                   const uint8_t *private_key,
+                   uint8_t *signature,
+                   int *const result)) {
+  PT_BEGIN(&protothread);
+
+  *result = !uECC_sign(private_key,
+                       message_hash,
+                       ecc_curve_p_256.bytes,
+                       signature,
+                       uECC_secp256r1());
+
+  PT_END(&protothread);
+}
+/*---------------------------------------------------------------------------*/
+PT_THREAD(ecc_verify(const uint8_t *signature,
+                     const uint8_t *message_hash,
+                     const uint8_t *public_key,
+                     int *const result)) {
+  PT_BEGIN(&protothread);
+
+  *result = !uECC_verify(public_key,
+                         message_hash,
+                         ecc_curve_p_256.bytes,
+                         signature,
+                         uECC_secp256r1());
+
+  PT_END(&protothread);
+}
+/*---------------------------------------------------------------------------*/
+PT_THREAD(ecc_generate_key_pair(uint8_t *public_key,
+                                uint8_t *private_key,
+                                int *const result)) {
+  PT_BEGIN(&protothread);
+
+  *result = !uECC_make_key(public_key,
+                           private_key,
+                           uECC_secp256r1());
+
+  PT_END(&protothread);
+}
+/*---------------------------------------------------------------------------*/
+PT_THREAD(ecc_generate_shared_secret(const uint8_t *public_key,
+                                     const uint8_t *private_key,
+                                     uint8_t *shared_secret,
+                                     int *const result)) {
+  PT_BEGIN(&protothread);
+
+  *result = !uECC_shared_secret(public_key,
+                                private_key,
+                                shared_secret,
+                                uECC_secp256r1());
+
+  PT_END(&protothread);
+}
+/*---------------------------------------------------------------------------*/
+PT_THREAD(ecc_generate_fhmqv_secret(const uint8_t *static_private_key,
+                                    const uint8_t *ephemeral_private_key,
+                                    const uint8_t *static_public_key,
+                                    const uint8_t *ephemeral_public_key,
+                                    const uint8_t *d,
+                                    const uint8_t *e,
+                                    uint8_t *shared_secret,
+                                    int *const result)) {
+  PT_BEGIN(&protothread);
+
+  *result = !uECC_shared_fhmqv_secret(static_private_key,
+                                      ephemeral_private_key,
+                                      static_public_key,
+                                      ephemeral_public_key,
+                                      d,
+                                      e,
+                                      shared_secret,
+                                      uECC_secp256r1());
+
+  PT_END(&protothread);
+}
+/*---------------------------------------------------------------------------*/
+PT_THREAD(ecc_generate_ecqv_certificate(
+              const uint8_t *proto_public_key,
+              const uint8_t *ca_private_key,
+              ecc_encode_ecqv_certificate_and_hash_t encode_and_hash,
+              void *opaque,
+              uint8_t *private_key_reconstruction_data,
+              int *const result)) {
+  PT_BEGIN(&protothread);
+
+  *result = !uECC_generate_ecqv_certificate(proto_public_key,
+                                            ca_private_key,
+                                            encode_and_hash,
+                                            opaque,
+                                            private_key_reconstruction_data,
+                                            uECC_secp256r1());
+
+  PT_END(&protothread);
+}
+/*---------------------------------------------------------------------------*/
+PT_THREAD(ecc_generate_ecqv_key_pair(
+              const uint8_t *proto_private_key,
+              const uint8_t *certificate_hash,
+              const uint8_t *private_key_reconstruction_data,
+              uint8_t *public_key,
+              uint8_t *private_key,
+              int *const result)) {
+  PT_BEGIN(&protothread);
+
+  *result = !uECC_generate_ecqv_key_pair(proto_private_key,
+                                         certificate_hash,
+                                         ECC_CURVE_P_256_SIZE,
+                                         private_key_reconstruction_data,
+                                         public_key,
+                                         private_key,
+                                         uECC_secp256r1());
+
+  PT_END(&protothread);
+}
+/*---------------------------------------------------------------------------*/
+PT_THREAD(ecc_reconstruct_ecqv_public_key(
+              const uint8_t *certificate_hash,
+              const uint8_t *public_key_reconstruction_data,
+              const uint8_t *ca_public_key,
+              uint8_t *public_key,
+              int *const result)) {
+  PT_BEGIN(&protothread);
+
+  *result = !uECC_reconstruct_ecqv_public_key(certificate_hash,
+                                              ECC_CURVE_P_256_SIZE,
+                                              public_key_reconstruction_data,
+                                              ca_public_key,
+                                              public_key,
+                                              uECC_secp256r1());
+
+  PT_END(&protothread);
+}
+/*---------------------------------------------------------------------------*/
+void
+ecc_disable(void) {
+}
+/*---------------------------------------------------------------------------*/
+
+/** @} */

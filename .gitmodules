@@ -2,3 +2,6 @@
 	path = ext/tinydtls
 	url = https://github.com/eclipse/tinydtls.git
     ignore = dirty
+[submodule "ext/micro-ecc"]
+	path = ext/micro-ecc
+	url = https://github.com/kkrentz/micro-ecc.git
