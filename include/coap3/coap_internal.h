@@ -109,6 +109,7 @@
 #include "oscore-ng/oscore_ng_ecc.h"
 #include "uECC.h"
 #endif /* WITH_CONTIKI */
+#include "oscore-ng/oscore_ng_bakery.h"
 #include "oscore-ng/oscore_ng_cose.h"
 #include "oscore-ng/oscore_ng.h"
 #endif /* COAP_OSCORE_NG_SUPPORT */

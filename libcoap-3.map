@@ -26,6 +26,8 @@ global:
   coap_async_set_delay;
   coap_async_trigger;
   coap_attr_get_value;
+  coap_bakery_check_cookie;
+  coap_bakery_open;
   coap_block_build_body;
   coap_cache_derive_key;
   coap_cache_derive_key_w_ignore;
