@@ -19,6 +19,7 @@
  */
 
 #include "coap3/coap_libcoap_build.h"
+#define COAP_OPTION_CUSTOM_EXPERIMENT 42122
 
 #if COAP_OSCORE_SUPPORT
 #include <ctype.h>
@@ -557,6 +558,7 @@ coap_oscore_new_pdu_encrypted_lkd(coap_session_t *session,
     case COAP_OPTION_URI_PORT:
     case COAP_OPTION_PROXY_SCHEME:
     case COAP_OPTION_HOP_LIMIT:
+    case COAP_OPTION_CUSTOM_EXPERIMENT:
       /* Outer only */
       if (!coap_insert_option(osc_pdu,
                               opt_iter.number,

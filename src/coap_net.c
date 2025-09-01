@@ -16,6 +16,8 @@
 #include "coap3/coap_libcoap_build.h"
 #include "coap3/coap_mutex_internal.h"
 
+#define COAP_OPTION_CUSTOM_EXPERIMENT 42122
+
 #include <ctype.h>
 #include <stdio.h>
 #ifdef HAVE_LIMITS_H
@@ -4459,6 +4461,26 @@ coap_dispatch(coap_context_t *context, coap_session_t *session,
   }
 
   coap_option_filter_clear(&opt_filter);
+
+#ifdef COAP_EXPERIMENT_LOG_CUSTOM_OPTION
+  if (coap_check_option(pdu, COAP_OPTION_CUSTOM_EXPERIMENT, &opt_iter)){
+    coap_log_info("Custom experiment option (42122) detected in PDU!\n");
+    #include <coap3/coap_threadsafe_internal.h>
+    coap_lock_unlock();
+    if (session->recipient_ctx == NULL) {
+      #include "oscore/oscore.h"
+      static const char config_string[] =
+        "master_secret,hex,000102030405060708090A0B0C0D0E0F\n"
+        "sender_id,hex,0A\n"
+        "recipient_id,hex,0B\n"
+        "rfc8613_b_1_2,bool,false\n"
+        "rfc8613_b_2,bool,false\n";
+      coap_oscore_conf_t  *config_structure = coap_new_oscore_conf(*coap_make_str_const(config_string),NULL, NULL, 0);
+      coap_context_oscore_server(context, config_structure);
+    }
+    coap_lock_lock();
+  }
+#endif
 
 #if COAP_OSCORE_NG_SUPPORT
   int is_b2_request_1;
